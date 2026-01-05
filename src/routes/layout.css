@@ -1,3 +1,16 @@
 @import 'tailwindcss';
+/* Import DaisyUI sebagai plugin di v4 */
+@plugin "daisyui" {
+  themes: light --default, dark --preferslight;
+};
+
+@plugin "daisyui/theme" { 
+  name: "light";
+  default: true;
+  --color-primary: oklch(54.6% 0.245 262.881);
+  --color-secondary: teal;
+};
+
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+

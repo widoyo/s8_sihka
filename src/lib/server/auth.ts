@@ -4,8 +4,14 @@ import { sha256 } from '@oslojs/crypto/sha2';
 import { encodeBase64url, encodeHexLowerCase } from '@oslojs/encoding';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
+import { Lucia } from 'lucia';
+import { DrizzlePostgreSQLAdapter } from "@lucia-auth/adapter-drizzle";
+import { session, user } from "$lib/server/db/schema"; // Import tabel Anda
+import { dev } from "$app/environment";
 
 const DAY_IN_MS = 1000 * 60 * 60 * 24;
+
+const adapter = new DrizzlePostgreSQLAdapter(db, session, user);
 
 export const sessionCookieName = 'auth-session';
 
@@ -78,4 +84,31 @@ export function deleteSessionTokenCookie(event: RequestEvent) {
 	event.cookies.delete(sessionCookieName, {
 		path: '/'
 	});
+}
+
+export const lucia = new Lucia(adapter, {
+    sessionCookie: {
+        attributes: {
+            secure: !dev
+        }
+    },
+    // MAP DATABASE COLUMNS KE USER OBJECT
+    getUserAttributes: (attributes) => {
+        return {
+            username: attributes.username,
+            isAdmin: attributes.isAdmin, // Pastikan ini sesuai nama di schema.ts
+            isActive: attributes.isActive
+        };
+    }
+});
+
+declare module "lucia" {
+    interface Register {
+        Lucia: typeof lucia;
+        DatabaseUserAttributes: {
+            username: string;
+            isAdmin: boolean;
+            isActive: boolean;
+        };
+    }
 }

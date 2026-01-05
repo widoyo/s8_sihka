@@ -12,13 +12,16 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check .",
-		"test:unit": "vitest",
+		"test:unit": "vitest --mode test",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright test",
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"worker": "tsx src/lib/server/mqtt-worker.ts",
+		"auth:reset": "tsx scripts/reset-pw.ts",
+		"auth:reset:doc": "Gunakan: npm run auth:reset -- username password"
 	},
 	"devDependencies": {
 		"@oslojs/crypto": "^1.0.1",
@@ -32,6 +35,8 @@
 		"@tailwindcss/vite": "^4.1.17",
 		"@types/node": "^20",
 		"@vitest/browser-playwright": "^4.0.15",
+		"daisyui": "^5.5.14",
+		"dotenv": "^17.2.3",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.0",
 		"playwright": "^1.57.0",
@@ -41,13 +46,19 @@
 		"svelte": "^5.45.6",
 		"svelte-check": "^4.3.4",
 		"tailwindcss": "^4.1.17",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vite": "^7.2.6",
 		"vitest": "^4.0.15",
 		"vitest-browser-svelte": "^2.0.1"
 	},
 	"dependencies": {
+		"@lucia-auth/adapter-drizzle": "^1.1.0",
 		"@node-rs/argon2": "^2.0.2",
-		"postgres": "^3.4.7"
+		"drizzle-zod": "^0.8.3",
+		"mqtt": "^5.14.1",
+		"oslo": "^1.2.1",
+		"postgres": "^3.4.7",
+		"zod": "^4.2.1"
 	}
 }
