@@ -7,6 +7,7 @@ import * as schema from './db/schema'; // Import schema yang sudah ada
 import * as relations from './db/relations';
 import { eq, sql } from 'drizzle-orm';
 import { late } from 'zod/v3';
+import { RDailyService } from './services/rdaily.service';
 
 // Load .env manual agar process.env terisi
 dotenv.config();
@@ -40,17 +41,35 @@ mqttClient.on('message', async (topic, message) => {
             console.warn('⚠️ Format device tidak valid:', payload.device);
             return;
         }
-        const posId = await getPosId(db, sn);
-        console.log('Serial Number:', sn);
-        console.log('Pos ID:', posId);
+        const source = 'SB';
+        const posId = await RDailyService.getPosId(db, sn, source);
 
         const sampling: Date = new Date(payload.sampling * 1000);
         console.log('Sampling:', sampling);
         // Simpan ke DB menggunakan schema SvelteKit
-        
-        await upsertRemoteDailyData(db, posId, sn, 'SB', sampling, payload);
 
-        
+        await RDailyService.upsertDailyData(db, {
+            posId: posId,
+            nama: sn,
+            source: source,
+            sampling: sampling,
+            payload: payload
+        });
+
+        if (payload.tick != null) {
+          const hour = sampling.getHours();
+          let targetDate = RDailyService.formatToLocalDate(sampling);
+          
+          if (hour < 7) {
+              const yesterday = new Date(sampling);
+              yesterday.setDate(sampling.getDate() - 1);
+              targetDate = RDailyService.formatToLocalDate(yesterday);
+          }
+
+          await RDailyService.updateRainAccumulation(db, sn, targetDate);
+
+          console.log(`📊 [${sn}] Rain Updated for ${targetDate}`);
+        }
     } catch (err) {
         console.error('❌ Gagal simpan data:', err);
     }
@@ -75,66 +94,4 @@ function getBotId(input: string): string | null {
   // match[0] is the full string
   // match[1] is the content of the first capture group (xxxx-x)
   return match ? match[1] : null;
-}
-
-/**
- * Insert or Update Remote Daily Data
- * @param db 
- * @param newData 
- */
-async function upsertRemoteDailyData(db: any, posId: number|null, nama: string, source: string, sampling: Date, raw: any) {
-
-  const localDate = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Jakarta', // GMT+7
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(new Date(sampling));
-
-  await db.insert(schema.rdaily)
-    .values({
-      posId: posId,
-      source: source,
-      nama: nama,
-      sampling: localDate,
-      raw: [raw],
-    })
-    .onConflictDoUpdate({
-      target: [schema.rdaily.nama, schema.rdaily.sampling], // The unique constraint
-      set: { 
-        raw: sql`${schema.rdaily.raw} || excluded.raw`,
-        posId: posId
-      },
-    });
-}
-
-/**
- * Get posId from device table by nama
- * @param db 
- * @returns 
- */
-async function getPosId(db: any, nama: string): Promise<number|null> {
-  const result = await db
-    .select({ 
-      posId: schema.device.posId
-    })
-    .from(schema.device)
-    .where(eq(schema.device.nama, nama))
-    .limit(1);
-
-  // Jika tidak ada, bisa insert sebagai device baru
-  if (result.length === 0) {
-    const insertResult = await db
-      .insert(schema.device)
-      .values({
-        nama: nama,
-        aktif: true, 
-        latestSampling: new Date().toISOString(),
-        source: 'SB'
-      });
-    
-  }
-  // result will be an array like [{ id: 123 }] or []
-  console.log('getOposId result:', result[0]);
-  return result.length > 0 ? result[0].posId : null;
 }
