@@ -1,3 +1,4 @@
+import { doublePrecision } from 'drizzle-orm/gel-core';
 import { 
 	pgTable, foreignKey, uniqueIndex, unique,
 	serial, integer, text, timestamp, real, varchar, index, date, boolean, jsonb 
@@ -106,6 +107,9 @@ export const rdaily = pgTable("rdaily", {
 	sampling: date().notNull(),
 	/** data hasil konversi dari data logger dalam bentuk JSON, berupa list of object */
 	raw: jsonb("raw").$type<any[]>().notNull().default([]),
+	rainDaily: doublePrecision("rain_daily"),
+	tmaDaily: doublePrecision("tma_daily"),
+	lastUpdated: timestamp("last_updated").defaultNow(),
 }, (table) => [
 	index("rdaily_nama").using("btree", table.nama.asc().nullsLast().op("text_ops")),
 	uniqueIndex("rdaily_nama_sampling").using("btree", table.nama.asc().nullsLast().op("date_ops"), table.sampling.asc().nullsLast().op("text_ops")),
